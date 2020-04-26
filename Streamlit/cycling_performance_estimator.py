@@ -4,7 +4,6 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 
-st.write('Hi')
 
 ### Methods
 
@@ -28,8 +27,8 @@ def p_legs(w, G, v, units='imperial'):
 
     # print('p_legs = ' + str(p_legs))
     return output_p
-test = p_legs(w=150, G=0.081, v=7, units='imperial')
-st.write(test)
+# test = p_legs(w=150, G=0.081, v=7, units='imperial')
+# st.write(test)
 
 # Table of power outputs for incremented speed inputs (constant G)
 @st.cache
@@ -52,11 +51,9 @@ def p_legs_table(w, G, v_center, units='imperial'):
         np.set_printoptions(suppress=True)
 
     return arr
-test = p_legs_table(w=150, G=0.081, v_center=7, units='imperial')
-st.write(test)
+# test = p_legs_table(w=150, G=0.081, v_center=7, units='imperial')
+# st.write(test)
 ###
-
-
 
 
 
