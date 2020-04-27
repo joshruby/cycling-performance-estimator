@@ -1,0 +1,1 @@
+web: sh setup.sh && streamlit run cycling_performance_estimator.py
