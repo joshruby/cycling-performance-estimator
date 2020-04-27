@@ -1,4 +1,7 @@
 # https://gilberttanner.com/blog/deploying-your-streamlit-dashboard-with-heroku
+# https://www.geekality.net/2019/03/13/heroku-deploy-sub-directory/
+# https://medium.com/@shalandy/deploy-git-subdirectory-to-heroku-ea05e95fce1f
+# https://medium.com/better-programming/keeping-my-heroku-app-alive-b19f3a8c3a82
 
 import streamlit as st
 import math
