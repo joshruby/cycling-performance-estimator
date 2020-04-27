@@ -5,6 +5,18 @@
 # https://www.geekality.net/2019/03/13/heroku-deploy-sub-directory/
 # https://medium.com/@shalandy/deploy-git-subdirectory-to-heroku-ea05e95fce1f
 
+# To manually update the Heroku deployment:
+# $ heroku login
+# $ heroku git:clone -a agile-journey-39962
+# $ cd agile-journey-39962
+
+# Now manually delete the contents of the folder that was created and copy in the latest files in the working dir of the app
+
+# $ git add .
+# $ git commit -am "make it better"
+# $ git push heroku master
+
+
 
 import streamlit as st
 import math
@@ -63,10 +75,7 @@ def p_legs_table(w, G, v_center, units='imperial'):
 # st.write(test)
 ###
 
-st.header('Test change')
-st.write('Am I there?')
-st.writ('How about now?')
-
+st.header('Cycling Performance Estimator')
 
 
 data = p_legs_table(w=150, G=0.080, v_center=7, units='imperial')
