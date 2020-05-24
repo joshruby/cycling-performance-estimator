@@ -13,6 +13,8 @@ pipreqs = "*"
 requests-oauthlib = "*"
 httpx-oauth = "*"
 shelve = "*"
+polyline = "*"
+plotly = "*"
 
 [requires]
 python_version = "3.8"

@@ -32,6 +32,10 @@ import pandas as pd
 import requests
 from requests_oauthlib import OAuth2Session
 import shelve
+import polyline
+import plotly.graph_objects as go
+
+mapbox_token = 'pk.eyJ1IjoianJydWJ5IiwiYSI6ImNrOWtrMDU3czF2dTkzZG53Nmw2NDdneTMifQ.zzXEhr0Z1biR2pydOFco8A'
 
 
 ### Methods
@@ -313,47 +317,82 @@ st.header('Cycling Performance Estimator')
 #
 #
 
-###
-st.subheader('Storing segment data with shelve so users don"t need to authenticate (data loaded using my personal access token)')
-
-# Kings: 611413
-# OLH: 8109834
-
-segmentName = 'Kings Mountain (Tripp to Skyline)'
-segmentID = 611413
 
 
-headers = {"Authorization": "Bearer 4436257166e049cbbe20c49ac7bf451c12bdf4a8"}
-call = 'https://www.strava.com/api/v3/segments/'+str(segmentID)
-# st.write(call)
-r = requests.get(call, headers=headers)
-r = r.json()
-# st.write(r)
 
-with shelve.open('segments') as db:
-    db[segmentName] = r
-    # st.subheader('Shelve value')
-    # st.write(db[segmentName])
-    # del db['PSkyline - Old La Honda to Page Mill']
-    st.subheader('segments.db keys')
-    st.write(list(db.keys()))
 
-st.write('Alphabetically sorted keys')
+
+
+### Load segments
+# st.subheader('Storing segment data with shelve so users don"t need to authenticate (data loaded using my personal access token)')
+
+# segmentName = 'Kings Mountain (Tripp to Skyline)'
+# segmentID = 611413
+
+# headers = {"Authorization": "Bearer 4436257166e049cbbe20c49ac7bf451c12bdf4a8"}
+# call = 'https://www.strava.com/api/v3/segments/'+str(segmentID)
+# # st.write(call)
+# r = requests.get(call, headers=headers)
+# r = r.json()
+# # st.write(r)
+
+# with shelve.open('segments') as db:
+#     db[segmentName] = r
+#     # st.subheader('Shelve value')
+#     # st.write(db[segmentName])
+#     # del db['PSkyline - Old La Honda to Page Mill']
+#     st.subheader('segments.db keys')
+#     st.write(list(db.keys()))
+
+#
+#
+#
 
 with shelve.open('segments') as db:
     sortedKeys = sorted(db, key=str.lower)
-for key in sortedKeys:
-    st.write(key)
 
-# st.write('Accessing an arbitrary segment')
-# with shelve.open('segments') as db:
-#     st.write(db["Torrey Pines"])
-#
-#
+selectedSegments = st.sidebar.multiselect('Segment(s)', sortedKeys, default='Old La Honda (Bridge to Mailboxes)')
+# st.write(selectedSegments)
 
-# st.sidebar()
+for key in selectedSegments:
+    with shelve.open('segments') as db:
+        st.write(db[key]['name'], 'https://www.strava.com/segments/' + str(db[key]['id']))
+        # st.write(db[key])
+        # returns a list of decoded (lat, lon) tuples
+        segment_path = polyline.decode(db[key]['map']['polyline'])
+        segment_path = np.array(segment_path)
+        # st.write(segment_path)
 
-selectedSegments = st.multiselect('Segment(s)', sortedKeys, default='Old La Honda (Bridge to Mailboxes)')
-st.write(selectedSegments)
+# Plotly map from decoded polyline (that actually updates!)
+    fig = go.Figure(go.Scattermapbox(
+        lat=segment_path[:,0],
+        lon=segment_path[:,1],
+        mode='lines',
+        # text=[city_name],
+    ))
 
-st.write('test')
+    fig.update_layout(
+        mapbox_style="stamen-terrain",
+        autosize=False,
+        margin=dict(
+            l=10,
+            r=10,
+            b=10,
+            t=10,
+            pad=0
+        ),
+        hovermode=False,
+        mapbox=dict(
+            accesstoken=mapbox_token,
+            bearing=0,
+            center=dict(
+                lat=(segment_path[0,0] + segment_path[-1,0])/2,
+                lon=(segment_path[0,1] + segment_path[-1,1])/2
+                # this centers the map on the center of the segment
+            ),
+            pitch=0,
+            zoom=13
+        ),
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
