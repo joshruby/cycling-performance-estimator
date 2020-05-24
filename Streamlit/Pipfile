@@ -10,6 +10,9 @@ streamlit = "*"
 matplotlib = "*"
 pandas = "*"
 pipreqs = "*"
+requests-oauthlib = "*"
+httpx-oauth = "*"
+shelve = "*"
 
 [requires]
 python_version = "3.8"
