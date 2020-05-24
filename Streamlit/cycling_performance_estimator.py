@@ -319,8 +319,8 @@ st.subheader('Storing segment data with shelve so users don"t need to authentica
 # Kings: 611413
 # OLH: 8109834
 
-segmentName = 'Mt. Soledad - Soledad Mtn Rd'
-segmentID = 616252
+segmentName = 'Kings Mountain (Tripp to Skyline)'
+segmentID = 611413
 
 
 headers = {"Authorization": "Bearer 4436257166e049cbbe20c49ac7bf451c12bdf4a8"}
@@ -335,15 +335,23 @@ with shelve.open('segments') as db:
     # st.subheader('Shelve value')
     # st.write(db[segmentName])
     # del db['PSkyline - Old La Honda to Page Mill']
-    st.subheader('db keys')
+    st.subheader('segments.db keys')
     st.write(list(db.keys()))
 
+st.write('Alphabetically sorted keys')
+
 with shelve.open('segments') as db:
-    for key in db:
-        st.write('key: ' + key)
-        st.write('value: ', db[key]['id'])
-#
+    sortedKeys = sorted(db, key=str.lower)
+for key in sortedKeys:
+    st.write(key)
+
+# st.write('Accessing an arbitrary segment')
+# with shelve.open('segments') as db:
+#     st.write(db["Torrey Pines"])
 #
 #
 
+# st.sidebar()
 
+selectedSegments = st.multiselect('Segment(s)', sortedKeys, default='Old La Honda (Bridge to Mailboxes)')
+st.write(selectedSegments)
