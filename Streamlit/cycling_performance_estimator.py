@@ -89,7 +89,7 @@ def p_legs_table(w, G, v_center, units='imperial'):
 # st.write(test)
 ###
 
-st.header('Cycling Performance Estimator')
+# st.header('Cycling Performance Estimator')
 
 
 # data = p_legs_table(w=150, G=0.080, v_center=7, units='imperial')
@@ -349,74 +349,61 @@ st.header('Cycling Performance Estimator')
 #
 #
 
+w_person = st.sidebar.number_input('Rider Weight [kg]')
+w_gear = st.sidebar.number_input('Gear Weight [kg]')
+w = w_person + w_gear
+
 with shelve.open('segments') as db:
     sortedKeys = sorted(db, key=str.lower)
-
 selectedSegments = st.sidebar.multiselect('Segment(s)', sortedKeys, default='Old La Honda (Bridge to Mailboxes)')
 # st.write(selectedSegments)
 
 for key in selectedSegments:
     with shelve.open('segments') as db:
-        st.write(db[key])
-        st.write(db[key]['name'], 'https://www.strava.com/segments/' + str(db[key]['id']))
         # st.write(db[key])
+        st.subheader(db[key]['name'])
+        st.write('https://www.strava.com/segments/' + str(db[key]['id']))
+        # st.write(db[key]['total_elevation_gain'])
+        if(db[key]['total_elevation_gain'] == 0):
+            st.write('Total elevation gain: **NO DATA** (blame Strava!)')
+        else:
+            st.write('Total elevation gain: ', db[key]['total_elevation_gain']*3.281, '[ft]')
+        st.write('Average grade: ', db[key]['average_grade'], '[%]')
+
         # returns a list of decoded (lat, lon) tuples
         segment_path = polyline.decode(db[key]['map']['polyline'])
         segment_path = np.array(segment_path)
         segment_haversine = haversine(db[key]['start_latlng'], db[key]['end_latlng'], unit=Unit.METERS)
-        st.write('Haversine: ', segment_haversine)
+        # st.write('Haversine: ', segment_haversine)
         # Fitting haversine into 400 px
         segment_haversine_per_px = segment_haversine/400
-        st.write('Meters/pixel needed to fit haversine in 400 pixels = haversine/400 = ', segment_haversine_per_px)
+        # st.write('Meters/pixel needed to fit haversine in 400 pixels = haversine/400 = ', segment_haversine_per_px)
         # Programmatically determine the optimal zoom level (assuming 40 deg latitude)
         # See here: https://docs.mapbox.com/help/glossary/zoom-level/
-        if(segment_haversine >= 29.3):
-            segment_mapbox_zoom = 10
-        elif(29.3 > segment_haversine >= 14.6):
-            segment_mapbox_zoom = 11
-        elif(14.6 > segment_haversine >= 7.3):
-            segment_mapbox_zoom = 12
-        elif(7.3 > segment_haversine >= 3.7):
-            segment_mapbox_zoom = 13
-        elif(3.7 > segment_haversine >= 1.8):
-            segment_mapbox_zoom = 14
-        elif(1.8 > segment_haversine >= 0.9):
-            segment_mapbox_zoom = 15
-        elif(0.9 > segment_haversine >= 0.5):
-            segment_mapbox_zoom = 16
-
         # 29.277 corresponds to a zoom level of 10 at 40 deg lat
         starting_span = 29.277
         for zoom_level in range(10, 18+1):
             i = zoom_level - 10
-            denom_small = 2*i
-            if(denom_small == 0):
-                denom_small = 1
-            denom_large = 2*(i+1)
-            # higher = i*2
-            # lowr = (i+1)*2
+            denom_small = pow(2, i)
+            denom_large = pow(2,(i+1))
 
-            # if(segment_haversine_per_px > starting_span):
-            #     segment_mapbox_zoom = 10
-            # elif(zoom level > 10):
-            if(zoom_level == 10):
-                st.write(zoom_level, starting_span, segment_haversine_per_px)
-            elif(zoom_level > 10):
-                st.write(zoom_level, starting_span/denom_small, segment_haversine_per_px, starting_span/denom_large)
-                # segment_mapbox_zoom = zoom_level
-
-        for i in range(0, 9):
-            denom_small = 2*i
-            if(denom_small == 0):
-                denom_small = 1
-            denom_large = 2*(i+1)
-            st.write('Low: ', denom_small, 'High: ', denom_large)
+            if(segment_haversine_per_px >= starting_span):
+                segment_mapbox_zoom = 10
+                # st.write('segment_mapbox_zoom: ', segment_mapbox_zoom)
+                break
+            # st.write(zoom_level, starting_span*2/denom_small, segment_haversine_per_px, starting_span*2/denom_large)
+            if(starting_span*2/denom_small > segment_haversine_per_px >= starting_span*2/denom_large):
+                segment_mapbox_zoom = zoom_level
+                # st.write('segment_mapbox_zoom: ', segment_mapbox_zoom)
+                break
 
 # Plotly map from decoded polyline (that actually updates!)
     fig = go.Figure(go.Scattermapbox(
         lat=segment_path[:,0],
         lon=segment_path[:,1],
         mode='lines',
+        opacity=0.75,
+        line=dict(width=4)
         # text=[city_name],
     ))
 
@@ -440,7 +427,7 @@ for key in selectedSegments:
                 # this centers the map on the center of the segment
             ),
             pitch=0,
-            zoom=18
+            zoom=segment_mapbox_zoom
         ),
     )
 
