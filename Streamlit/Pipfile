@@ -15,6 +15,7 @@ httpx-oauth = "*"
 shelve = "*"
 polyline = "*"
 plotly = "*"
+haversine = "*"
 
 [requires]
 python_version = "3.8"

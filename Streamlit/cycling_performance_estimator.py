@@ -34,6 +34,7 @@ from requests_oauthlib import OAuth2Session
 import shelve
 import polyline
 import plotly.graph_objects as go
+from haversine import haversine, Unit
 
 mapbox_token = 'pk.eyJ1IjoianJydWJ5IiwiYSI6ImNrOWtrMDU3czF2dTkzZG53Nmw2NDdneTMifQ.zzXEhr0Z1biR2pydOFco8A'
 
@@ -356,12 +357,60 @@ selectedSegments = st.sidebar.multiselect('Segment(s)', sortedKeys, default='Old
 
 for key in selectedSegments:
     with shelve.open('segments') as db:
+        st.write(db[key])
         st.write(db[key]['name'], 'https://www.strava.com/segments/' + str(db[key]['id']))
         # st.write(db[key])
         # returns a list of decoded (lat, lon) tuples
         segment_path = polyline.decode(db[key]['map']['polyline'])
         segment_path = np.array(segment_path)
-        # st.write(segment_path)
+        segment_haversine = haversine(db[key]['start_latlng'], db[key]['end_latlng'], unit=Unit.METERS)
+        st.write('Haversine: ', segment_haversine)
+        # Fitting haversine into 400 px
+        segment_haversine_per_px = segment_haversine/400
+        st.write('Meters/pixel needed to fit haversine in 400 pixels = haversine/400 = ', segment_haversine_per_px)
+        # Programmatically determine the optimal zoom level (assuming 40 deg latitude)
+        # See here: https://docs.mapbox.com/help/glossary/zoom-level/
+        if(segment_haversine >= 29.3):
+            segment_mapbox_zoom = 10
+        elif(29.3 > segment_haversine >= 14.6):
+            segment_mapbox_zoom = 11
+        elif(14.6 > segment_haversine >= 7.3):
+            segment_mapbox_zoom = 12
+        elif(7.3 > segment_haversine >= 3.7):
+            segment_mapbox_zoom = 13
+        elif(3.7 > segment_haversine >= 1.8):
+            segment_mapbox_zoom = 14
+        elif(1.8 > segment_haversine >= 0.9):
+            segment_mapbox_zoom = 15
+        elif(0.9 > segment_haversine >= 0.5):
+            segment_mapbox_zoom = 16
+
+        # 29.277 corresponds to a zoom level of 10 at 40 deg lat
+        starting_span = 29.277
+        for zoom_level in range(10, 18+1):
+            i = zoom_level - 10
+            denom_small = 2*i
+            if(denom_small == 0):
+                denom_small = 1
+            denom_large = 2*(i+1)
+            # higher = i*2
+            # lowr = (i+1)*2
+
+            # if(segment_haversine_per_px > starting_span):
+            #     segment_mapbox_zoom = 10
+            # elif(zoom level > 10):
+            if(zoom_level == 10):
+                st.write(zoom_level, starting_span, segment_haversine_per_px)
+            elif(zoom_level > 10):
+                st.write(zoom_level, starting_span/denom_small, segment_haversine_per_px, starting_span/denom_large)
+                # segment_mapbox_zoom = zoom_level
+
+        for i in range(0, 9):
+            denom_small = 2*i
+            if(denom_small == 0):
+                denom_small = 1
+            denom_large = 2*(i+1)
+            st.write('Low: ', denom_small, 'High: ', denom_large)
 
 # Plotly map from decoded polyline (that actually updates!)
     fig = go.Figure(go.Scattermapbox(
@@ -372,7 +421,7 @@ for key in selectedSegments:
     ))
 
     fig.update_layout(
-        mapbox_style="stamen-terrain",
+        mapbox_style="outdoors",
         autosize=False,
         margin=dict(
             l=10,
@@ -391,7 +440,7 @@ for key in selectedSegments:
                 # this centers the map on the center of the segment
             ),
             pitch=0,
-            zoom=13
+            zoom=18
         ),
     )
 
