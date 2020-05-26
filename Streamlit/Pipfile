@@ -16,6 +16,7 @@ shelve = "*"
 polyline = "*"
 plotly = "*"
 haversine = "*"
+scipy = "*"
 
 [requires]
 python_version = "3.8"

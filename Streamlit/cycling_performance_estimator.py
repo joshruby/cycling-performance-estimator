@@ -35,6 +35,7 @@ import shelve
 import polyline
 import plotly.graph_objects as go
 from haversine import haversine, Unit
+from scipy.interpolate import interp1d
 
 mapbox_token = 'pk.eyJ1IjoianJydWJ5IiwiYSI6ImNrOWtrMDU3czF2dTkzZG53Nmw2NDdneTMifQ.zzXEhr0Z1biR2pydOFco8A'
 
@@ -432,3 +433,71 @@ for key in selectedSegments:
     )
 
     st.plotly_chart(fig, use_container_width=True)
+
+### Elevation profile
+# https://docs.mapbox.com/api/maps/#tilequery
+# https://docs.mapbox.com/help/tutorials/find-elevations-with-tilequery-api/
+# "Because the elevation data you want is included in the contour layer, you will need to parse the returned GeoJSON to isolate the features from the contour layer and find the highest elevation value."
+# mapbox API GET:/v4/{tileset_id}/tilequery/{lon},{lat}.json
+payload = {'layers': 'contour', 'radius': '0', 'limit': '50', 'access_token': mapbox_token}
+tileset_id = 'mapbox.mapbox-terrain-v2'
+lat = 37.395614
+lon = -122.247693
+r = requests.get('https://api.mapbox.com/v4/'+tileset_id+'/tilequery/'+str(lon)+','+str(lat)+'.json', params=payload)
+st.write(r.url)
+r = r.json()
+
+# elev = []
+# for feature in r['features']:
+#     elev.append(feature['properties']['ele'])
+# st.write(elev)
+# point_elevation = max(elev)
+# st.write(point_elevation)
+# st.write(segment_path[0])
+
+payload = {'layers': 'contour', 'radius': '0', 'limit': '50', 'access_token': mapbox_token}
+tileset_id = 'mapbox.mapbox-terrain-v2'
+i = 0
+elevs = []
+for coords in segment_path:
+    if(i % 10 == 0):
+        lat = coords[0]
+        lon = coords[1]
+        r = requests.get('https://api.mapbox.com/v4/'+tileset_id+'/tilequery/'+str(lon)+','+str(lat)+'.json', params=payload)
+        r = r.json()
+
+        elev = []
+        for feature in r['features']:
+            elev.append(feature['properties']['ele'])
+        point_elevation = max(elev)*3.28
+        elevs.append(point_elevation)
+    i+=1
+
+st.write(len(elevs))
+# st.write(elevs)
+
+# st.write(elevs)
+# st.write(np.linspace(0, len(elevs)-1, len(elevs)))
+
+st.area_chart(elevs)
+
+# f2 = interp1d(elevs, kind='cubic')
+
+
+
+
+
+
+
+
+
+
+# st.write(r['features'])
+
+# st.write(r['features'])
+# st.write(r['features'][1]['properties'])
+# st.write('ele' in r['features'][1]['properties'])
+
+#
+#
+#
