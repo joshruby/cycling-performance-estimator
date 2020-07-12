@@ -48,7 +48,7 @@ mapbox_token = 'pk.eyJ1IjoianJydWJ5IiwiYSI6ImNrOWtrMDU3czF2dTkzZG53Nmw2NDdneTMif
 def p_legs(w, G, v, units='imperial'):
     # Model assumptions
     cda = .509*.63 # = 0.32067
-    loss_dt = 0.02 # [2%]
+    loss_dt = 0.05 # [5%]
     rho = 1.22601
     c_rr = 0.005
 
@@ -62,14 +62,16 @@ def p_legs(w, G, v, units='imperial'):
 
     # print('p_legs = ' + str(p_legs))
     return output_p
-# test = p_legs(w=150, G=0.081, v=7, units='imperial')
-# st.write(test)
+test = p_legs(w=178.574, G=0.074, v=7, units='imperial')
+st.write(test/4.362026)
+test = p_legs(w=180.779, G=0.074, v=7, units='imperial')
+st.write(test/4.362026)
 
 # Table of power outputs for incremented speed inputs (constant G)
 @st.cache
 def p_legs_table(w, G, v_center, units='imperial'):
     speed_window = 2
-    speed_increment = 0.25
+    speed_increment = 0.15
     input_speeds = np.arange(v_center - speed_window, v_center + speed_window + 1, speed_increment)    
     arr = np.empty((0,3), float)
 
@@ -86,8 +88,8 @@ def p_legs_table(w, G, v_center, units='imperial'):
         np.set_printoptions(suppress=True)
 
     return arr
-# test = p_legs_table(w=150, G=0.081, v_center=7, units='imperial')
-# st.write(test)
+test = p_legs_table(w=81, G=0.074, v_center=8, units='metric')
+st.write(test)
 ###
 
 # st.header('Cycling Performance Estimator')
@@ -126,14 +128,24 @@ def p_legs_table(w, G, v_center, units='imperial'):
 
 # st.write(fig)
 
-# st.subheader('Time to finish OLH (Strava ID 8109834)')
-# data = p_legs_table(150, 0.08, 7, units = 'imperial')
-# ttf = 2.98 / data[:, 0] * 60
-# data = np.column_stack((data, ttf))
-# data = pd.DataFrame(data,
-#                     columns = ['Speed [m/s]', 'Power [W]', 'VAM [m/hr]', 'Time [min]']
-# )
-# st.table(data)
+st.subheader('Time to Finish PM')
+data = p_legs_table(152, 0.045, 9, units = 'imperial')
+ttf = 8.3 / data[:, 0] * 60
+data = np.column_stack((data, ttf))
+data = pd.DataFrame(data,
+                    columns = ['Speed [m/s]', 'Power [W]', 'VAM [m/hr]', 'Time [min]']
+)
+st.table(data)
+
+
+
+data = p_legs_table(176, 0.045, 10, units = 'imperial')
+ttf = 8.3 / data[:, 0] * 60
+data = np.column_stack((data, ttf))
+data = pd.DataFrame(data,
+                    columns = ['Speed [m/s]', 'Power [W]', 'VAM [m/hr]', 'Time [min]']
+)
+st.table(data)
 
 
 ### OAuth 2
