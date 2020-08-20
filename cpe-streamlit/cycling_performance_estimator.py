@@ -40,6 +40,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 from haversine import haversine, Unit
 # from scipy.interpolate import interp1d
+import os
 
 mapbox_token = 'pk.eyJ1IjoianJydWJ5IiwiYSI6ImNrOWtrMDU3czF2dTkzZG53Nmw2NDdneTMifQ.zzXEhr0Z1biR2pydOFco8A'
 
@@ -261,13 +262,13 @@ else:
 
     st.header('Strava Segment Analysis')
 
-    with shelve.open('segments') as db:
+    with shelve.open('segments', flag='r') as db:
         sortedKeys = sorted(db, key=str.lower)
     selectedSegments = st.multiselect('Segment(s)', sortedKeys)
     # st.write(selectedSegments)
 
     for key in selectedSegments:
-        with shelve.open('segments') as db:
+        with shelve.open('segments', flag='r') as db:
             # st.write(db[key])
             st.subheader(db[key]['name'])
             st.write('https://www.strava.com/segments/' + str(db[key]['id']))
@@ -409,3 +410,5 @@ else:
     #
     #
     #
+
+    st.write(os.listdir())
