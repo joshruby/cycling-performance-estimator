@@ -7,17 +7,12 @@ verify_ssl = true
 
 [packages]
 streamlit = "*"
-matplotlib = "*"
+numpy = "*"
 pandas = "*"
-pipreqs = "*"
-requests-oauthlib = "*"
-httpx-oauth = "*"
-shelve = "*"
+requests = "*"
 polyline = "*"
 plotly = "*"
 haversine = "*"
-scipy = "*"
-sympy = "*"
 
 [requires]
 python_version = "3.8"
