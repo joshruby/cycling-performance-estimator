@@ -42,6 +42,7 @@ from haversine import haversine, Unit
 # from scipy.interpolate import interp1d
 import os
 import json
+import time
 
 mapbox_token = 'pk.eyJ1IjoianJydWJ5IiwiYSI6ImNrOWtrMDU3czF2dTkzZG53Nmw2NDdneTMifQ.zzXEhr0Z1biR2pydOFco8A'
 
@@ -110,7 +111,7 @@ def p_legs( w, G, v):
 
 # Table of power outputs for incremented speed inputs (constant G)
 # Assumes SI unit inputs [m/s]
-# @st.cache
+@st.cache
 def p_legs_table( w, G ):
     df = pd.DataFrame()
 
@@ -234,7 +235,7 @@ def vamPlot( w, G ):
 
 # Assumes s units (d [m])
 # Returns p_legs_table array with an additional column called 'timeToFinish' with units of [s]
-# @st.cache
+@st.cache
 def timeToFinish( w, G, d ):
     df = copy.deepcopy(p_legs_table(w=w, G=G))
     df['timeToFinish [min]'] = (d / df['v [m/s]']) / 60
@@ -261,17 +262,77 @@ def timeToFinishPlot( w, G, d ):
     )
     return fig
 
+@st.cache
+def segmentMap( db, key ):
+    # returns a list of decoded (lat, lon) tuples
+    segment_path = polyline.decode(db[key]['map']['polyline'])
+    segment_path = np.array(segment_path)
+    segment_haversine = haversine(db[key]['start_latlng'], db[key]['end_latlng'], unit=Unit.METERS)
+    # Fitting haversine into 400 px
+    segment_haversine_per_px = segment_haversine/400
+    # st.write('Meters/pixel needed to fit haversine in 400 pixels = haversine/400 = ', segment_haversine_per_px)
+    # Programmatically determine the optimal zoom level (assuming 40 deg latitude)
+    # See here: https://docs.mapbox.com/help/glossary/zoom-level/
+    # 29.277 corresponds to a zoom level of 10 at 40 deg lat
+    starting_span = 29.277
+    for zoom_level in range(10, 18+1):
+        i = zoom_level - 10
+        denom_small = pow(2, i)
+        denom_large = pow(2,(i+1))
+
+        if(segment_haversine_per_px >= starting_span):
+            segment_mapbox_zoom = 10
+            # st.write('segment_mapbox_zoom: ', segment_mapbox_zoom)
+            break
+        # st.write(zoom_level, starting_span*2/denom_small, segment_haversine_per_px, starting_span*2/denom_large)
+        if(starting_span*2/denom_small > segment_haversine_per_px >= starting_span*2/denom_large):
+            segment_mapbox_zoom = zoom_level
+            # st.write('segment_mapbox_zoom: ', segment_mapbox_zoom)
+            break
+
+    # Plotly map from decoded polyline (that actually updates!)
+    fig = go.Figure(go.Scattermapbox(
+        lat=segment_path[:,0],
+        lon=segment_path[:,1],
+        mode='lines',
+        opacity=0.75,
+        line=dict(width=4)
+        # text=[city_name],
+    ))
+    fig.update_layout(
+        mapbox_style="outdoors",
+        autosize=False,
+        margin=dict(
+            l=10,
+            r=10,
+            b=10,
+            t=10,
+            pad=0
+        ),
+        hovermode=False,
+        mapbox=dict(
+            accesstoken=mapbox_token,
+            bearing=0,
+            center=dict(
+                lat=(segment_path[0,0] + segment_path[-1,0])/2,
+                lon=(segment_path[0,1] + segment_path[-1,1])/2
+                # this centers the map at the geometric center of the area that the segment spans
+            ),
+            pitch=0,
+            zoom=segment_mapbox_zoom
+        ),
+    )
+    return fig
+
 if w_person == 0:
-    st.warning('Please enter your weight in the sidebar')
+    st.info('Please enter your weight in the sidebar')
 
 else:
-    # st.header('Speed vs Power')
-
     grade = st.slider('Grade [%]', 0., 30., value=0., step=0.1) / 100
     st.plotly_chart(speedVsPowerPlot(w=w_total, G=grade), use_container_width=True)
     if grade != 0:
         st.plotly_chart(vamPlot(w=w_total, G=grade), use_container_width=True)
-
+    
 
     st.header('Strava Segment Analysis')
 
@@ -281,6 +342,7 @@ else:
     selectedSegments = st.multiselect('Segment(s)', sortedKeys)
 
     for key in selectedSegments:
+        # Display segment data
         st.subheader(db[key]['name'])
         st.write('https://www.strava.com/segments/' + str(db[key]['id']))
         st.write('Distance', round(db[key]['distance'] / 1000, 2), ' km = ', round(db[key]['distance'] / 1000 * 0.621, 2), ' mi')
@@ -293,68 +355,19 @@ else:
         
         st.write('Average grade: ', db[key]['average_grade'], '%')
 
+        # Display segment on map
+        st.plotly_chart(segmentMap(db, key), use_container_width=True)
 
-        # returns a list of decoded (lat, lon) tuples
-        segment_path = polyline.decode(db[key]['map']['polyline'])
-        segment_path = np.array(segment_path)
-        segment_haversine = haversine(db[key]['start_latlng'], db[key]['end_latlng'], unit=Unit.METERS)
-        # Fitting haversine into 400 px
-        segment_haversine_per_px = segment_haversine/400
-        # st.write('Meters/pixel needed to fit haversine in 400 pixels = haversine/400 = ', segment_haversine_per_px)
-        # Programmatically determine the optimal zoom level (assuming 40 deg latitude)
-        # See here: https://docs.mapbox.com/help/glossary/zoom-level/
-        # 29.277 corresponds to a zoom level of 10 at 40 deg lat
-        starting_span = 29.277
-        for zoom_level in range(10, 18+1):
-            i = zoom_level - 10
-            denom_small = pow(2, i)
-            denom_large = pow(2,(i+1))
+        # Display time to finish plot
+        if(db[key]['total_elevation_gain'] == 0):
+            G = db[key]['average_grade'] / 100
+            st.warning('The total elevation gain for this segment is missing in Strava\'s database so it has been calculated using the provided average grade. The resulting power calculation will be less accurate than for segments where the total elevation gain is a measured quantity.')
+        else:
+            # This should be more accurate
+            G = db[key]['total_elevation_gain'] / db[key]['distance']
+        st.plotly_chart(timeToFinishPlot(w=w_total, G=G, d=db[key]['distance']), use_container_width=True)
 
-            if(segment_haversine_per_px >= starting_span):
-                segment_mapbox_zoom = 10
-                # st.write('segment_mapbox_zoom: ', segment_mapbox_zoom)
-                break
-            # st.write(zoom_level, starting_span*2/denom_small, segment_haversine_per_px, starting_span*2/denom_large)
-            if(starting_span*2/denom_small > segment_haversine_per_px >= starting_span*2/denom_large):
-                segment_mapbox_zoom = zoom_level
-                # st.write('segment_mapbox_zoom: ', segment_mapbox_zoom)
-                break
-
-    # Plotly map from decoded polyline (that actually updates!)
-        fig = go.Figure(go.Scattermapbox(
-            lat=segment_path[:,0],
-            lon=segment_path[:,1],
-            mode='lines',
-            opacity=0.75,
-            line=dict(width=4)
-            # text=[city_name],
-        ))
-        fig.update_layout(
-            mapbox_style="outdoors",
-            autosize=False,
-            margin=dict(
-                l=10,
-                r=10,
-                b=10,
-                t=10,
-                pad=0
-            ),
-            hovermode=False,
-            mapbox=dict(
-                accesstoken=mapbox_token,
-                bearing=0,
-                center=dict(
-                    lat=(segment_path[0,0] + segment_path[-1,0])/2,
-                    lon=(segment_path[0,1] + segment_path[-1,1])/2
-                    # this centers the map on the center of the segment
-                ),
-                pitch=0,
-                zoom=segment_mapbox_zoom
-            ),
-        )
-        st.plotly_chart(fig, use_container_width=True)
-
-        st.plotly_chart(timeToFinishPlot(w=w_total, G=(db[key]['total_elevation_gain'] / db[key]['distance']), d=db[key]['distance']), use_container_width=True)
+ 
 
 
     ### Elevation profile
