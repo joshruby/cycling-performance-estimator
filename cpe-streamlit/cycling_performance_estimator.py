@@ -41,29 +41,41 @@ from plotly.subplots import make_subplots
 from haversine import haversine, Unit
 # from scipy.interpolate import interp1d
 import os
+import json
 
 mapbox_token = 'pk.eyJ1IjoianJydWJ5IiwiYSI6ImNrOWtrMDU3czF2dTkzZG53Nmw2NDdneTMifQ.zzXEhr0Z1biR2pydOFco8A'
 
-### Load segments into shelf
-# st.subheader('Storing segment data with shelve so users don"t need to authenticate (data loaded using my personal access token)')
+### Load segments into one text file
+# segmentIDs = [620770, 609300, 6445920, 1012036, 627158, 642780, 614445, 651158, 726454, 628189, 3615418, 7684550, 794318, 646188, 627058, 3621774, 617901, 226705, 359323, 4235382, 617794, 2149043, 616252, 611413, 1638547, 8109834, 4197]
 
-# segmentName = 'Kings Mountain (Tripp to Skyline)'
-# segmentID = 611413
+# # Make dict
+# keys = []
+# values = []
+# for segmentID in segmentIDs:
+#     headers = {"Authorization": "Bearer 7f0df2a26f507385948517b86ac51b29682be4b4"}
+#     call = 'https://www.strava.com/api/v3/segments/'+str(segmentID)
+#     r = requests.get(call, headers=headers)
+    
+#     r = r.json()
+#     values.append(r)
 
-# headers = {"Authorization": "Bearer 360aa0de604d1b0f738bbc8bf92877f8783d9148"}
-# call = 'https://www.strava.com/api/v3/segments/'+str(segmentID)
-# # st.write(call)
-# r = requests.get(call, headers=headers)
-# r = r.json()
-# # st.write(r)
+#     segmentName = r['name']
+#     keys.append(segmentName)
+# segmentDict = dict(zip(keys, values))
 
-# with shelve.open('segments') as db:
+# # Write to text file in json format
+# with open('segmentDict.txt', 'w') as outfile:
+#     json.dump(segmentDict, outfile)
+
+# # Make shelve
+# with shelve.open('test') as db:
 #     db[segmentName] = r
 #     # st.subheader('Shelve value')
 #     # st.write(db[segmentName])
 #     # del db['Skyline - Old La Honda to Page Mill']
 #     st.subheader('segments.db keys')
 #     st.write(list(db.keys()))
+#     st.write(db['Test'])
 
 ###
 
@@ -260,91 +272,89 @@ else:
     if grade != 0:
         st.plotly_chart(vamPlot(w=w_total, G=grade), use_container_width=True)
 
+
     st.header('Strava Segment Analysis')
 
-    with shelve.open('segments', flag='r') as db:
+    with open('segmentDict.txt', 'r') as infile:
+        db = json.load(infile)
         sortedKeys = sorted(db, key=str.lower)
     selectedSegments = st.multiselect('Segment(s)', sortedKeys)
-    # st.write(selectedSegments)
 
     for key in selectedSegments:
-        with shelve.open('segments', flag='r') as db:
-            # st.write(db[key])
-            st.subheader(db[key]['name'])
-            st.write('https://www.strava.com/segments/' + str(db[key]['id']))
-            st.write('Distance', round(db[key]['distance'] / 1000, 2), ' km = ', round(db[key]['distance'] / 1000 * 0.621, 2), ' mi')
-            
-            if(db[key]['total_elevation_gain'] == 0):
-                totElevGain = round(db[key]['average_grade'] * db[key]['distance'] / 100)
-            else:
-                totElevGain = round(db[key]['total_elevation_gain'])
-            st.write('Total elevation gain: ', totElevGain, ' m = ', round(totElevGain * 3.281), 'ft')
-            
-            st.write('Average grade: ', db[key]['average_grade'], '%')
+        st.subheader(db[key]['name'])
+        st.write('https://www.strava.com/segments/' + str(db[key]['id']))
+        st.write('Distance', round(db[key]['distance'] / 1000, 2), ' km = ', round(db[key]['distance'] / 1000 * 0.621, 2), ' mi')
+        
+        if(db[key]['total_elevation_gain'] == 0):
+            totElevGain = round(db[key]['average_grade'] * db[key]['distance'] / 100)
+        else:
+            totElevGain = round(db[key]['total_elevation_gain'])
+        st.write('Total elevation gain: ', totElevGain, ' m = ', round(totElevGain * 3.281), 'ft')
+        
+        st.write('Average grade: ', db[key]['average_grade'], '%')
 
 
-            # returns a list of decoded (lat, lon) tuples
-            segment_path = polyline.decode(db[key]['map']['polyline'])
-            segment_path = np.array(segment_path)
-            segment_haversine = haversine(db[key]['start_latlng'], db[key]['end_latlng'], unit=Unit.METERS)
-            # st.write('Haversine: ', segment_haversine)
-            # Fitting haversine into 400 px
-            segment_haversine_per_px = segment_haversine/400
-            # st.write('Meters/pixel needed to fit haversine in 400 pixels = haversine/400 = ', segment_haversine_per_px)
-            # Programmatically determine the optimal zoom level (assuming 40 deg latitude)
-            # See here: https://docs.mapbox.com/help/glossary/zoom-level/
-            # 29.277 corresponds to a zoom level of 10 at 40 deg lat
-            starting_span = 29.277
-            for zoom_level in range(10, 18+1):
-                i = zoom_level - 10
-                denom_small = pow(2, i)
-                denom_large = pow(2,(i+1))
+        # returns a list of decoded (lat, lon) tuples
+        segment_path = polyline.decode(db[key]['map']['polyline'])
+        segment_path = np.array(segment_path)
+        segment_haversine = haversine(db[key]['start_latlng'], db[key]['end_latlng'], unit=Unit.METERS)
+        # Fitting haversine into 400 px
+        segment_haversine_per_px = segment_haversine/400
+        # st.write('Meters/pixel needed to fit haversine in 400 pixels = haversine/400 = ', segment_haversine_per_px)
+        # Programmatically determine the optimal zoom level (assuming 40 deg latitude)
+        # See here: https://docs.mapbox.com/help/glossary/zoom-level/
+        # 29.277 corresponds to a zoom level of 10 at 40 deg lat
+        starting_span = 29.277
+        for zoom_level in range(10, 18+1):
+            i = zoom_level - 10
+            denom_small = pow(2, i)
+            denom_large = pow(2,(i+1))
 
-                if(segment_haversine_per_px >= starting_span):
-                    segment_mapbox_zoom = 10
-                    # st.write('segment_mapbox_zoom: ', segment_mapbox_zoom)
-                    break
-                # st.write(zoom_level, starting_span*2/denom_small, segment_haversine_per_px, starting_span*2/denom_large)
-                if(starting_span*2/denom_small > segment_haversine_per_px >= starting_span*2/denom_large):
-                    segment_mapbox_zoom = zoom_level
-                    # st.write('segment_mapbox_zoom: ', segment_mapbox_zoom)
-                    break
+            if(segment_haversine_per_px >= starting_span):
+                segment_mapbox_zoom = 10
+                # st.write('segment_mapbox_zoom: ', segment_mapbox_zoom)
+                break
+            # st.write(zoom_level, starting_span*2/denom_small, segment_haversine_per_px, starting_span*2/denom_large)
+            if(starting_span*2/denom_small > segment_haversine_per_px >= starting_span*2/denom_large):
+                segment_mapbox_zoom = zoom_level
+                # st.write('segment_mapbox_zoom: ', segment_mapbox_zoom)
+                break
 
-        # Plotly map from decoded polyline (that actually updates!)
-            fig = go.Figure(go.Scattermapbox(
-                lat=segment_path[:,0],
-                lon=segment_path[:,1],
-                mode='lines',
-                opacity=0.75,
-                line=dict(width=4)
-                # text=[city_name],
-            ))
-            fig.update_layout(
-                mapbox_style="outdoors",
-                autosize=False,
-                margin=dict(
-                    l=10,
-                    r=10,
-                    b=10,
-                    t=10,
-                    pad=0
+    # Plotly map from decoded polyline (that actually updates!)
+        fig = go.Figure(go.Scattermapbox(
+            lat=segment_path[:,0],
+            lon=segment_path[:,1],
+            mode='lines',
+            opacity=0.75,
+            line=dict(width=4)
+            # text=[city_name],
+        ))
+        fig.update_layout(
+            mapbox_style="outdoors",
+            autosize=False,
+            margin=dict(
+                l=10,
+                r=10,
+                b=10,
+                t=10,
+                pad=0
+            ),
+            hovermode=False,
+            mapbox=dict(
+                accesstoken=mapbox_token,
+                bearing=0,
+                center=dict(
+                    lat=(segment_path[0,0] + segment_path[-1,0])/2,
+                    lon=(segment_path[0,1] + segment_path[-1,1])/2
+                    # this centers the map on the center of the segment
                 ),
-                hovermode=False,
-                mapbox=dict(
-                    accesstoken=mapbox_token,
-                    bearing=0,
-                    center=dict(
-                        lat=(segment_path[0,0] + segment_path[-1,0])/2,
-                        lon=(segment_path[0,1] + segment_path[-1,1])/2
-                        # this centers the map on the center of the segment
-                    ),
-                    pitch=0,
-                    zoom=segment_mapbox_zoom
-                ),
-            )
-            st.plotly_chart(fig, use_container_width=True)
+                pitch=0,
+                zoom=segment_mapbox_zoom
+            ),
+        )
+        st.plotly_chart(fig, use_container_width=True)
 
-            st.plotly_chart(timeToFinishPlot(w=w_total, G=(db[key]['total_elevation_gain'] / db[key]['distance']), d=db[key]['distance']), use_container_width=True)
+        st.plotly_chart(timeToFinishPlot(w=w_total, G=(db[key]['total_elevation_gain'] / db[key]['distance']), d=db[key]['distance']), use_container_width=True)
 
 
     ### Elevation profile
@@ -411,4 +421,5 @@ else:
     #
     #
 
-    st.write(os.listdir())
+# with open('test_text.txt', 'r') as db:
+#     st.write(db.readlines())
