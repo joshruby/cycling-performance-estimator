@@ -1,3 +1,6 @@
+# v1.0
+version = 'v1.0'
+
 #############################################################################################################
 # https://gilberttanner.com/blog/deploying-your-streamlit-dashboard-with-heroku
 # https://medium.com/better-programming/keeping-my-heroku-app-alive-b19f3a8c3a82
@@ -90,6 +93,9 @@ cda = st.sidebar.number_input('Cd A [m^2]', value=0.321) # .509*.63 = 0.32067
 rho = st.sidebar.number_input('Air Density [kg/m^3]', value=1.226)
 loss_dt = st.sidebar.number_input('Drivetrain Loss [%]', value=5) / 100
 crr = st.sidebar.number_input('Coefficient of Rolling Resistance [%]', value=0.5) / 100
+
+st.sidebar.markdown('*{}*'.format(version))
+st.sidebar.markdown('*For help or to report a bug, email me at josh.r.ruby@gmail.com.*')
 
 # # From this point forward all quanitites are assumed to be metric by default. If imperial is selected about the model outputs will need to be converted before being displayed.  
 # if(unit == 'imperial'):
