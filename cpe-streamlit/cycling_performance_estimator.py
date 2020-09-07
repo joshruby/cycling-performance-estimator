@@ -1,5 +1,4 @@
-# v1.0
-version = 'v1.0'
+version = 'v1.1'
 
 #############################################################################################################
 # https://gilberttanner.com/blog/deploying-your-streamlit-dashboard-with-heroku
@@ -131,7 +130,7 @@ def p_legs_table( w, G ):
         v_mph = input_v * 2.237
         output_p = p_legs(w, G, input_v)
         vam = input_v * math.sin(math.atan(G)) * 3600
-        df_newRow = pd.DataFrame([[round(input_v, 2), round(v_kmh, 2), round(v_mph, 2), round(output_p), round(vam)]], columns=['v [m/s]', 'v [km/h]', 'v [mi/h]', 'p [W]', 'vam [m/h]'])
+        df_newRow = pd.DataFrame([[input_v, v_kmh, v_mph, output_p, vam]], columns=['v [m/s]', 'v [km/h]', 'v [mi/h]', 'p [W]', 'vam [m/h]'])
         df = df.append(df_newRow, ignore_index=True)
         
         # Break the function when output_p reaches 500 W
@@ -162,6 +161,12 @@ def speedVsPowerPlot( w, G ):
         yaxis_title='Speed [km/h]',
         hovermode='x',
         # plot_bgcolor='white'
+    )
+    fig.update_xaxes(
+        hoverformat='.0f'
+    )
+    fig.update_yaxes(
+        hoverformat='.1f'
     )
 
     # fig = make_subplots(specs=[[{"secondary_y": True}]])
@@ -235,16 +240,30 @@ def vamPlot( w, G ):
         hovermode='x',
         # plot_bgcolor='white'
     )
+    fig.update_xaxes(
+        hoverformat='.0f'
+    )
+    fig.update_yaxes(
+        hoverformat='.0f'
+    )
     
     return fig
 
-# Assumes s units (d [m])
+# Assumes si units (d [m])
 # Returns p_legs_table array with an additional column called 'timeToFinish' with units of [s]
-@st.cache
+# @st.cache
 def timeToFinish( w, G, d ):
     df = copy.deepcopy(p_legs_table(w=w, G=G))
-    df['timeToFinish [min]'] = (d / df['v [m/s]']) / 60
+
+    # Cut table off below 80 W
     df = df.loc[df['p [W]'] >= 80]
+    
+    # Creates float64 column in minutes
+    df['timeToFinish'] = (d / df['v [m/s]']) / 60
+
+    # Convert seconds (floats) to timedelta64 objects (hh:mm:ss) rounded to the nearest second
+    # df['timeToFinish'] = pd.to_datetime(df['timeToFinish'], unit='s').dt.strftime("%H:%M:%S")    
+
     return df
 
 # @st.cache
@@ -254,7 +273,7 @@ def timeToFinishPlot( w, G, d ):
     fig = go.Figure()
     fig.add_trace(go.Scatter(
         x=df['p [W]'],
-        y=df['timeToFinish [min]'],
+        y=df['timeToFinish'],
         # name=str(w-i) + ' kg',
         # fill='tonexty',
     ))
@@ -263,7 +282,12 @@ def timeToFinishPlot( w, G, d ):
         xaxis_title='Power [W]',
         yaxis_title='Time to Finish [min]',
         hovermode='x',
-        # plot_bgcolor='white'
+    )
+    fig.update_xaxes(
+        hoverformat='.0f'
+    )
+    fig.update_yaxes(
+        hoverformat='.1f'
     )
     return fig
 
