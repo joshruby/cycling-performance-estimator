@@ -1,4 +1,4 @@
-version = 'v1.1'
+version = 'v1.2'
 
 #############################################################################################################
 # https://gilberttanner.com/blog/deploying-your-streamlit-dashboard-with-heroku
@@ -96,11 +96,6 @@ crr = st.sidebar.number_input('Coefficient of Rolling Resistance [%]', value=0.5
 st.sidebar.markdown('*{}*'.format(version))
 st.sidebar.markdown('*For help or to report a bug, email me at josh.r.ruby@gmail.com.*')
 
-# # From this point forward all quanitites are assumed to be metric by default. If imperial is selected about the model outputs will need to be converted before being displayed.  
-# if(unit == 'imperial'):
-#     w = w * 0.454
-# ###
-
 ### Methods
 def p_model( loss_dt, w, G, crr, cda, rho, v ):
     return pow((1 - loss_dt), -1) * (9.8067 * w * (math.sin(math.atan(G)) + crr * math.cos(math.atan(G))) + 
@@ -158,9 +153,9 @@ def speedVsPowerPlot( w, G ):
     fig.update_layout(
         title='Speed vs Power',
         xaxis_title='Power [W]',
-        yaxis_title='Speed [km/h]',
+        yaxis_title='Speed [km/h] and [mi/h]',
         hovermode='x',
-        # plot_bgcolor='white'
+        showlegend=False
     )
     fig.update_xaxes(
         hoverformat='.0f'
@@ -352,6 +347,7 @@ def segmentMap( db, key ):
         ),
     )
     return fig
+###
 
 if w_person == 0:
     st.info('Please enter your weight in the sidebar')
