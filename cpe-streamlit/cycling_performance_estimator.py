@@ -131,8 +131,7 @@ def p_legs_table( w, G ):
         v_mph = input_v * 2.237
         output_p = p_legs(w, G, input_v)
         vam = input_v * math.sin(math.atan(G)) * 3600
-
-        df_newRow = pd.DataFrame([[input_v, v_kmh, v_mph, output_p, vam]], columns=['v [m/s]', 'v [km/h]', 'v [mi/h]', 'p [W]', 'vam [m/h]'])
+        df_newRow = pd.DataFrame([[round(input_v, 2), round(v_kmh, 2), round(v_mph, 2), round(output_p), round(vam)]], columns=['v [m/s]', 'v [km/h]', 'v [mi/h]', 'p [W]', 'vam [m/h]'])
         df = df.append(df_newRow, ignore_index=True)
         
         # Break the function when output_p reaches 500 W
