@@ -251,7 +251,7 @@ def vamPlot( w, G ):
 
 # Assumes si units (d [m])
 # Returns p_legs_table array with an additional column called 'timeToFinish' with units of [s]
-# @st.cache
+@st.cache
 def timeToFinish( w, G, d ):
     df = copy.deepcopy(p_legs_table(w=w, G=G))
 
